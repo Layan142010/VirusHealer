@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأثير اللقاحات</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="vacc.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- مكتبة Chart.js -->
+</head>
+<body>
+
+<header>
+    <div class="logo">
+        <h1>تأثير اللقاحات</h1>
+    </div>
+    <nav>
+        <a href="index.html">الرئيسية</a>
+        <a href="sim.html">المختصين بالقرب منك</a>
+        <a href="dia.html">تشخيص الأمراض</a>
+        <a href="vacc.html">تأثير اللقاحات</a>
+        <a href="ai.html">المستشار الصحي</a>
+        <a href="cases.html">دراسات الحالة</a>
+    </nav>
+</header>
+
+<main>
+    <section class="intro">
+        <h2>كيف تقلل اللقاحات من الإصابات؟</h2>
+        <p>حرك المؤشر لتغيير نسبة التطعيم وشاهد تأثيره على عدد الإصابات.</p>
+        <label for="vaccineRate">نسبة التطعيم: <span id="vaccinePercent">50%</span></label>
+        <input type="range" id="vaccineRate" min="0" max="100" value="50">
+    </section>
+
+    <section class="chart-section">
+        <canvas id="vaccineChart"></canvas>
+    </section>
+</main>
+
+<footer>
+    <p>&copy; 2025 موقع مكافحة الفيروسات</p>
+</footer>
+
+</body>
+</html>

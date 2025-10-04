@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>المستشار الصحي AI</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5; color:#222; }
+header { background:#007bff; color:#fff; padding:15px; text-align:center; }
+header nav a { color:white; margin:0 10px; text-decoration:none; font-weight:bold; }
+header nav a:hover { text-decoration:underline; }
+
+main { padding:20px; max-width:900px; margin:0 auto; }
+
+.chat-box {
+  background:#fff;
+  border-radius:10px;
+  padding:20px;
+  max-height:500px;
+  overflow-y:auto;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  margin-bottom:15px;
+}
+
+.chat-message { margin-bottom:10px; }
+.chat-message.user { text-align:right; color:#007bff; }
+.chat-message.ai { text-align:left; color:#222; }
+
+input[type="text"] {
+  width:80%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  transition: width 0.3s ease;
+}
+
+input[type="text"]:focus { width:90%; outline:none; }
+
+button {
+  padding:10px 16px;
+  background:#007bff;
+  color:white;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+button:hover { background:#005ec0; }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="header-container">
+        <h1>المستشار الصحي</h1>
+        <nav class="nav-bar">
+        <a href="index.html">الرئيسية</a>
+        <a href="sim.html">الأطباء القريبين</a>
+        <a href="dia.html">تشخيص الأمراض</a>
+        <a href="vacc.html">تأثير اللقاحات</a>
+        <a href="ai.html">المستشار الصحي</a>
+        <a href="cases.html">دراسات الحالة</a>
+        </nav>
+    </div>
+</header>
+      
+<main>
+  <div class="chat-box" id="chatBox"></div>
+
+  <div>
+    <input type="text" id="userInput" placeholder="اكتب رسالتك هنا...">
+    <button id="sendBtn">إرسال</button>
+  </div>
+</main>
+
+<script>
+// قاعدة بيانات الأطباء
+const doctorsDB = [
+  {name:'د. محمد العلي', specialty:'أمراض باطنية', city:'الرياض', phone:'0501111111'},
+  {name:'د. نورة الحربي', specialty:'أمراض صدرية', city:'الدمام', phone:'0502222222'},
+  {name:'د. خالد الزهراني', specialty:'أطفال', city:'جدة', phone:'0503333333'},
+  {name:'د. سارة العتيبي', specialty:'أمراض جلدية', city:'الخبر', phone:'0504444444'},
+];
+
+// قائمة الأسئلة المتتابعة
+const questions = [
+  "مرحبا! كيف تشعر اليوم؟",
+  "هل تشعر بأي أعراض صحية؟ (مثال: حرارة، سعال، صداع)",
+  "منذ متى بدأت هذه الأعراض؟",
+  "هل لديك أمراض مزمنة أو حساسيات؟",
+  "هل ترغب بنصائح عامة أو اقتراح طبيب قريب منك؟"
+];
+
+let answers = [];
+let currentQ = 0;
+const chatBox = document.getElementById('chatBox');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+
+// عرض رسالة في الشات
+function addMessage(role, text){
+  const div = document.createElement('div');
+  div.className = 'chat-message ' + role;
+  div.textContent = text;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// بدء الحوار
+function askQuestion(){
+  if(currentQ < questions.length){
+    addMessage('ai', questions[currentQ]);
+  } else {
+    giveAdvice();
+  }
+}
+
+// معالجة إجابة المستخدم
+function handleAnswer(){
+  const text = userInput.value.trim();
+  if(!text) return;
+  addMessage('user', text);
+  answers.push(text);
+  userInput.value = '';
+  currentQ++;
+  askQuestion();
+}
+
+// إعطاء نصائح عامة أو اقتراح طبيب
+function giveAdvice(){
+  addMessage('ai', 'شكراً لإجاباتك! هذه بعض النصائح:');
+
+  // نصيحة عامة حسب الأعراض
+  const symptomText = answers[1].toLowerCase();
+  if(symptomText.includes('حرارة') || symptomText.includes('حمى')){
+    addMessage('ai', 'يبدو أنك تعاني من حرارة، حاول شرب سوائل كثيرة والراحة.');
+  }
+  if(symptomText.includes('سعال')){
+    addMessage('ai', 'سعال مستمر؟ حاول تغطية الفم والابتعاد عن الآخرين.');
+  }
+  if(symptomText.includes('صداع')){
+    addMessage('ai', 'الصداع قد يحتاج للراحة أو مسكنات بسيطة. إذا استمر استشر طبيب.');
+  }
+
+  // اقتراح طبيب عشوائي
+  if(answers[4].toLowerCase().includes('طبيب') || answers[4].toLowerCase().includes('doctor')){
+    const doc = doctorsDB[Math.floor(Math.random()*doctorsDB.length)];
+    addMessage('ai', `أنصحك بزيارة طبيب متخصص قريب منك: ${doc.name} (${doc.specialty}) في ${doc.city}. رقم الهاتف: ${doc.phone}`);
+  }
+
+  addMessage('ai', 'تذكر: هذه نصائح عامة ولا تغني عن زيارة الطبيب عند الحاجة.');
+}
+
+// حدث إرسال
+sendBtn.addEventListener('click', handleAnswer);
+userInput.addEventListener('keypress', function(e){
+  if(e.key==='Enter'){ handleAnswer(); }
+});
+
+// بدء الحوار بالسؤال الأول
+askQuestion();
+</script>
+
+</body>
+</html>

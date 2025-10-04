@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تشخيص الأمراض</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin:0;
+  padding:0;
+  background:#f5f5f5;
+  color:#222;
+}
+
+header {
+  background:#007bff;
+  color:#fff;
+  padding:15px;
+  text-align:center;
+}
+
+header nav a {
+  color:white;
+  margin:0 10px;
+  text-decoration:none;
+  font-weight:bold;
+}
+
+header nav a:hover { text-decoration:underline; }
+
+main {
+  padding:20px;
+  max-width:1000px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
+  gap:20px;
+}
+
+.section-box {
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.section-box:hover {
+  transform: scale(1.03);
+  box-shadow:0 6px 15px rgba(0,0,0,0.3);
+}
+
+.section-box h2 {
+  margin-bottom:15px;
+  text-align:center;
+}
+
+.section-box input[type="text"]{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  margin-bottom:12px;
+}
+
+.section-box button {
+  padding:10px 16px;
+  background:#007bff;
+  color:white;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.section-box button:hover { background:#005ec0; }
+
+.response-box {
+  background:#e9f5ff;
+  padding:16px;
+  border-radius:10px;
+  margin-top:15px;
+}
+
+.note {
+  font-size:13px;
+  color:#555;
+  margin-top:10px;
+  text-align:center;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>تشخيص الأمراض</h1>
+  <nav>
+    <a href="index.html">الرئيسية</a>
+    <a href="sim.html">محاكاة انتشار الفيروس</a>
+    <a href="dia.html">تشخيص الأمراض</a>
+    <a href="vacc.html">تأثير اللقاحات</a>
+    <a href="ai.html">المستشار الصحي AI</a>
+    <a href="cases.html">دراسات الحالة</a>
+  </nav>
+</header>
+
+<main>
+  <div class="section-box">
+    <h2>أدخل الأعراض</h2>
+    <input type="text" id="symptomsInput" placeholder="مثال: حرارة، سعال، صداع">
+    <button id="startBtn">ابدأ التشخيص</button>
+    <div class="note">ملاحظة: هذا تشخيص مبدئي ولا يغني عن زيارة الطبيب.</div>
+  </div>
+
+  <div class="section-box response-box" id="diagnosisOutput" style="display:none;">
+    <!-- هنا تظهر النتائج -->
+  </div>
+</main>
+
+<script>
+const startBtn = document.getElementById('startBtn');
+const symptomsInput = document.getElementById('symptomsInput');
+const diagnosisOutput = document.getElementById('diagnosisOutput');
+
+const diseasesDB = [
+  {name:'نزلة برد', symptoms:['سعال','رشح','صداع','احتقان'], advice:'اشرب سوائل كثيرة وارتاح. إذا زادت الأعراض، استشر طبيب.'},
+  {name:'انفلونزا', symptoms:['حرارة','صداع','سعال','ألم عضلات','إعياء'], advice:'الراحة وشرب السوائل، إذا ظهرت صعوبة في التنفس تواصل مع الطبيب فوراً.'},
+  {name:'التهاب حلق', symptoms:['ألم حلق','حرارة','صعوبة بلع'], advice:'يمكن الغرغرة بالماء الدافئ، إذا زادت الأعراض استشر طبيب.'},
+  {name:'حساسية', symptoms:['رشح','عطس','حكة عين','احتقان'], advice:'تجنب المحفزات، ويمكن استخدام مضادات حساسية بعد استشارة الصيدلي.'},
+];
+
+function diagnose(symptoms){
+  const userSymptoms = symptoms.map(s => s.toLowerCase());
+  let matched = [];
+  diseasesDB.forEach(d => {
+    let count = 0;
+    d.symptoms.forEach(s => { if(userSymptoms.includes(s.toLowerCase())) count++; });
+    if(count>0) matched.push({disease:d.name, score:count, advice:d.advice});
+  });
+  matched.sort((a,b)=>b.score - a.score);
+  return matched.length ? matched[0] : null;
+}
+
+startBtn.addEventListener('click', ()=>{
+  const input = symptomsInput.value.trim();
+  if(!input){
+    alert('يرجى إدخال الأعراض أولاً');
+    return;
+  }
+  const symptomsArr = input.split(/[\s,]+/);
+  const result = diagnose(symptomsArr);
+  diagnosisOutput.style.display = 'block';
+  if(result){
+    diagnosisOutput.innerHTML = `<strong>التشخيص المبدئي:</strong> ${result.disease}<br><strong>نصائح عامة:</strong> ${result.advice}`;
+  } else {
+    diagnosisOutput.innerHTML = 'لم نتمكن من تحديد تشخيص دقيق. يُفضل استشارة طبيب.';
+  }
+});
+</script>
+
+</body>
+</html>

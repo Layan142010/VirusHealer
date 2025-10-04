@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>المستشفيات والدكاترة القريبة</title>
+<style>
+  /* تصميم بسيط متناسق مع الموقع القديم */
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #f5f5f5;
+    color: #222;
+  }
+  header {
+    background: #007bff;
+    color: #fff;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  header nav a {
+    color: white;
+    margin: 0 8px;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  main { padding: 18px; max-width: 1100px; margin: 0 auto; }
+  h2 { margin-top: 0; }
+  .controls {
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;
+  }
+  .controls button, .controls select, .controls input[type="text"] {
+    padding:8px 12px; border-radius:8px; border:1px solid #ccc; background:white;
+  }
+  .controls button { background:#007bff;color:white;border:none; cursor:pointer; }
+  .controls button:hover { background:#005ec0; }
+  .map-and-list { display: grid; grid-template-columns: 1fr 420px; gap:16px; }
+  @media (max-width:900px){ .map-and-list { grid-template-columns: 1fr; } }
+
+  /* الخريطة (iframe/placeholder) */
+  #map { height: 420px; border-radius:10px; border:1px solid #ccc; background:#fff; }
+
+  /* قائمة المستشفيات */
+  #hospitalsList { max-height:420px; overflow:auto; padding:10px; background:#fff; border-radius:10px; border:1px solid #ccc; }
+  .hospital {
+    border-bottom:1px solid #eee; padding:10px 6px; margin-bottom:6px;
+  }
+  .hospital:last-child { border-bottom:none; margin-bottom:0; }
+  .hospital h3 { margin:0 0 6px 0; font-size:16px; color:#007bff; }
+  .meta { font-size:13px; color:#555; margin-bottom:6px; }
+  .doctors { padding-left:0; margin:0; list-style:none; }
+  .doctor { padding:6px; border-radius:8px; background:#f7f7f7; margin-bottom:6px; display:flex; justify-content:space-between; gap:8px; align-items:center; }
+  .doctor .spec { font-size:13px; color:#333; font-weight:600; }
+  .doctor .name { font-size:14px; color:#222; }
+  .doctor .call { background:#28a745; color:white; padding:6px 10px; border-radius:6px; text-decoration:none; font-size:13px; }
+  .no-results { padding:14px; text-align:center; color:#666; }
+
+  /* زر تكبير المربعات عند المرور (النمط القديم) */
+  .hospital:hover { transform: scale(1.02); box-shadow: 0 6px 18px rgba(0,0,0,0.08); transition: all .18s ease; }
+
+  /* حالة تحميل */
+  #loading { padding:10px; background:#fff; border-radius:8px; border:1px solid #ddd; display:inline-block; margin-left:8px; }
+
+  /* تحذير بسيط */
+  .note { font-size:13px; color:#555; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>المستشفيات والدكاترة القريبة</h1>
+  <nav>
+    <a href="index.html">الرئيسية</a>
+    <a href="ai.html">مستشار صحي</a>
+    <a href="vaccines.html">اللقاحات</a>
+    <a href="cases.html">دراسات الحالة</a>
+  </nav>
+</header>
+
+<main>
+  <h2>اعثر على المستشفيات والدكاترة المتخصصين بالقرب منك</h2>
+
+  <div class="controls">
+    <button id="locBtn">استخدم موقعي الآن</button>
+    <span id="loading" style="display:none">تحميل...</span>
+    <label>
+      إبحث عن تخصص:
+      <select id="specialtySelect">
+        <option value="">كل التخصصات</option>
+        <option value="cardiologist">قلب (Cardiologist)</option>
+        <option value="pediatrician">أطفال (Pediatrician)</option>
+        <option value="pulmonologist">أمراض صدر (Pulmonologist)</option>
+        <option value="infectious">أمراض معدية (Infectious disease)</option>
+        <option value="ent">أنف وأذن وحنجرة (ENT)</option>
+        <option value="general">طبيب عام (General)</option>
+      </select>
+    </label>
+
+    <label>
+      نصف القطر (متر):
+      <input id="radiusInput" type="text" value="5000" />
+    </label>
+
+    <button id="searchBtn">ابحث</button>
+  </div>
+
+  <p class="note">ملاحظة: للحصول على نتائج حقيقية وروابط الاتصال، أدخل <strong>مفتاح Google Places API</strong> في الكود (موضح أدناه). إن لم يوجد، يستخدم الموقع بيانات تجريبية لعرض الشكل.</p>
+
+  <div class="map-and-list">
+    <div id="map">الخريطة ستكون هنا (تظهر موقعك والمستشفيات إذا تم تفعيل Google Maps).</div>
+    <div id="hospitalsList">
+      <!-- سيتم ملؤها بالنتائج -->
+      <div class="no-results">اضغط "استخدم موقعي الآن" ثم "ابحث" لعرض المستشفيات والدكاترة القريبة.</div>
+    </div>
+  </div>
+</main>
+
+<script>
+/*
+  ملاحظات تنفيذية:
+  - الخيار الأفضل: استخدم Google Places API (Nearby Search + Place Details)
+    لتجلب المستشفيات (type=hospital) ثم لكل مستشفى تعمل Nearby Search لكلمة "doctor" أو ترشح حسب specialty.
+    تحتاج API Key مع تفعيل Places API وMaps JavaScript API لو أردت الخريطة.
+  - في هذا الملف أقدم كود جاهز يقوم:
+    1) يأخذ إحداثيات عن طريق navigator.geolocation (أو يضع قيمة افتراضية في الدمام).
+    2) لو وضعت متغير GOOGLE_API_KEY في الكود، يحاول استدعاء Google Places عبر HTTP (منع CORS قد يحدث عندما تفتح الملف محلياً — استخدم Live Server أو خادم محلي).
+    3) لو لم توفّر مفتاح API أو عملت في وضع ملف محلي بدون سيرفر، فسيستخدم بيانات MOCK للتجربة.
+*/
+
+/* ======= CONFIG ======= */
+// ضع هنا مفتاح Google API (إن رغبت). مثال: const GOOGLE_API_KEY = 'AIza...';
+const GOOGLE_API_KEY = ''; // ← حط مفتاحك هنا إن عندك. لو فاضي سيتم استخدام بيانات تجريبية (mock).
+
+// افتراضي: إحداثيات الدمام (latitude, longitude) — يستخدم لو رفض المستخدم إعطاء الموقع أو فشل الجيولوكايشن.
+const DEFAULT_COORDS = { lat: 26.3927, lng: 49.9777 }; // Dammam, السعودية
+
+/* ======= عناصر DOM ======= */
+const locBtn = document.getElementById('locBtn');
+const loadingEl = document.getElementById('loading');
+const hospitalsList = document.getElementById('hospitalsList');
+const searchBtn = document.getElementById('searchBtn');
+const radiusInput = document.getElementById('radiusInput');
+const specialtySelect = document.getElementById('specialtySelect');
+const mapEl = document.getElementById('map');
+
+let currentCoords = null;
+
+/* ======= مساعدات صغيرة ======= */
+function setLoading(on){
+  loadingEl.style.display = on ? 'inline-block' : 'none';
+}
+
+function showError(msg){
+  hospitalsList.innerHTML = `<div class="no-results">${msg}</div>`;
+}
+
+// تنسيق عرض مستشفى واحد مع دكاترة
+function renderHospitals(hospitals){
+  if(!hospitals || hospitals.length === 0){
+    showError('لم يتم العثور على مستشفيات في النطاق المحدد.');
+    return;
+  }
+  hospitalsList.innerHTML = '';
+  hospitals.forEach(h => {
+    const div = document.createElement('div');
+    div.className = 'hospital';
+    div.innerHTML = `
+      <h3>${h.name}</h3>
+      <div class="meta">${h.address || ''} ${h.distance ? '• تقريباً ' + h.distance + ' م' : ''}</div>
+      <div class="meta"><strong>نوع المؤسسة:</strong> ${h.type || 'مستشفى'}</div>
+      <div><strong>الأطباء المتخصصون:</strong></div>
+      <ul class="doctors">
+        ${ (h.doctors && h.doctors.length) ? h.doctors.map(d => `
+          <li class="doctor">
+            <div>
+              <div class="name">${d.name}</div>
+              <div class="spec">${d.specialty}</div>
+            </div>
+            <div>
+              ${ d.phone ? `<a class="call" href="tel:${d.phone}">اتصال</a>` : '' }
+            </div>
+          </li>
+        `).join('') : `<li class="doctor">لا توجد بيانات أطباء متاحة</li>`}
+      </ul>
+    `;
+    hospitalsList.appendChild(div);
+  });
+}
+
+/* ======= MOCK DATA (تستخدم لو ما فيه API Key أو لتجربة) ======= */
+const MOCK_HOSPITALS = [
+  {
+    name: "مستشفى الدمام المركزي",
+    address: "طريق الملك فهد، الدمام",
+    type: "مستشفى حكومي",
+    distance: 1200,
+    doctors: [
+      { name: "د. أحمد العلي", specialty: "Cardiologist - قلب", phone: "+966501234567" },
+      { name: "د. سارة النجار", specialty: "Pediatrician - أطفال", phone: "+966501234568" }
+    ]
+  },
+  {
+    name: "مركز الشؤون الصحية - الخليج",
+    address: "حي الخليج، الدمام",
+    type: "مركز صحي",
+    distance: 2600,
+    doctors: [
+      { name: "د. محمد الحربي", specialty: "General - طبيب عام", phone: "+966501234569" }
+    ]
+  },
+  {
+    name: "مستشفى خاص الربيع",
+    address: "شارع الأمير متعب، الدمام",
+    type: "مستشفى خاص",
+    distance: 4100,
+    doctors: [
+      { name: "د. نورة الحداد", specialty: "Pulmonologist - صدر", phone: "+966501234570" },
+      { name: "د. فهد الزهراني", specialty: "Infectious disease - أمراض معدية", phone: "+966501234571" }
+    ]
+  }
+];
+
+/* ======= دوال الوصول إلى Places API (إن وضعت API Key) =======
+   ملاحظة مهمة: عند تجربة محلياً عبر file:// قد تواجه CORS أو قيود. استخدم Live Server أو سيرفر محلي.
+   الخطة: 
+   1) Nearby Search لمواقع type=hospital حول الإحداثيات للمسافة المطلوبة.
+   2) لكل مستشفى: Nearby Search بكلمة "doctor" أو textSearch مع parameter باسم المستشفى للحصول على أطباء قريبين (قد لا تعطي Google بيانات طبية مفصلة لكل مستشفى).
+   Google API docs:
+   - Nearby Search: https://developers.google.com/maps/documentation/places/web-service/search-nearby
+   - Place Details: https://developers.google.com/maps/documentation/places/web-service/details
+*/
+async function fetchHospitalsFromGoogle(lat, lng, radiusMeters, specialtyKeyword){
+  // Nearby Search for hospitals
+  const urlNearby = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radiusMeters}&type=hospital&key=${GOOGLE_API_KEY}&language=ar`;
+  const proxy = urlNearby; // ⚠️ قد تحتاج بروكسي أو خادم لعدم مواجهة CORS عند فتح الملف محلياً.
+  const res = await fetch(proxy);
+  if(!res.ok) throw new Error('خطأ في جلب المستشفيات من Google');
+  const data = await res.json();
+  if(data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+    throw new Error('Google Places error: ' + data.status);
+  }
+  const hospitals = [];
+  for(const p of data.results.slice(0,8)){ // نأخذ أول 8 فقط لتخفيف الاستعلامات
+    // نجرب أن نبحث عن أطباء قرب المستشفى (مقاربة) — نستخدم Nearby Search للـ "doctor"
+    let doctors = [];
+    try {
+      const doctorUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${p.geometry.location.lat},${p.geometry.location.lng}&radius=1500&keyword=doctor&key=${GOOGLE_API_KEY}&language=ar`;
+      const drRes = await fetch(doctorUrl);
+      const drJson = await drRes.json();
+      if(drJson && drJson.results){
+        doctors = drJson.results.slice(0,5).map(d => ({
+          name: d.name,
+          specialty: specialtyKeyword || 'طبيب',
+          phone: d.vicinity || ''
+        }));
+      }
+    } catch(e){
+      // تجاهل خطأ الأطباء
+    }
+
+    hospitals.push({
+      name: p.name,
+      address: p.vicinity || '',
+      type: 'مستشفى',
+      distance: Math.round(p.geometry.location ? 0 : 0), // لو أردت تحسب المسافة بدقة احسب من currentCoords
+      doctors
+    });
+  }
+  return hospitals;
+}
+
+/* ======= دالة البحث الرئيسية ======= */
+async function searchNearby(){
+  setLoading(true);
+  showError(''); // مسح
+  try{
+    const radius = parseInt(radiusInput.value) || 5000;
+    const specialty = specialtySelect.value;
+
+    // إذا عندنا API KEY نحاول استخدام Google، وإلا نعرض mock
+    if(GOOGLE_API_KEY && GOOGLE_API_KEY.trim().length > 5){
+      // جلب عبر Google Places
+      const hospitals = await fetchHospitalsFromGoogle(currentCoords.lat, currentCoords.lng, radius, specialty);
+      // لو ما رجع شيء نعرض mock كاحتياط
+      if(!hospitals || hospitals.length === 0){
+        renderHospitals(MOCK_HOSPITALS);
+      } else {
+        renderHospitals(hospitals);
+      }
+      // لو تحب، هنا يمكنك ربط الخريطة (Google Maps JS) لو رغبت بالخريطة الحقيقية.
+      mapEl.innerHTML = `<div style="padding:12px">تم جلب النتائج من Google Places (${hospitals.length} مستشفى)</div>`;
+    } else {
+      // بدون API: عرض بيانات MOCK مع فلترة بسيطة حسب التخصص إذا اختاره المستخدم
+      let filtered = MOCK_HOSPITALS.map(h => {
+        // إذا اختار المستخدم تخصصًا نحاول فلترة الأطباء بحسب الاسم الموجود في specialtySelect.value
+        if(specialty){
+          const spec = specialty;
+          const doctors = h.doctors.filter(d => d.specialty.toLowerCase().includes(spec.toLowerCase()) || d.specialty.toLowerCase().includes(spec));
+          return {...h, doctors};
+        }
+        return h;
+      }).filter(h=> h.doctors.length > 0 || !specialty); //إذا الفلتر مفعل، نظهر فقط المستشفيات التي تحتوي أطباء مطابقين
+      renderHospitals(filtered);
+      mapEl.innerHTML = `<div style="padding:12px">عرض بيانات تجريبية (Mock). لو ترغب في بيانات حقيقية، ضف Google API Key في الكود.</div>`;
+    }
+  } catch(err){
+    console.error(err);
+    showError('حدث خطأ أثناء البحث. تأكد من اتصالك بالإنترنت أو حاول لاحقًا.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+/* ======= تحديد الموقع ======= */
+locBtn.addEventListener('click', () => {
+  setLoading(true);
+  // طلب صلاحية الموقع
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos => {
+      currentCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      setLoading(false);
+      mapEl.innerHTML = `<div style="padding:12px">الموقع الحالي مضبوط: ${currentCoords.lat.toFixed(4)}, ${currentCoords.lng.toFixed(4)}</div>`;
+    }, err => {
+      // لو رفض المستخدم أو فشل -> نستخدم الافتراضي
+      currentCoords = DEFAULT_COORDS;
+      setLoading(false);
+      mapEl.innerHTML = `<div style="padding:12px">لم يتم الحصول على الموقع الحقيقي، سيتم استخدام موقع افتراضي: الدمام.</div>`;
+    }, { enableHighAccuracy: true, timeout: 8000 });
+  } else {
+    currentCoords = DEFAULT_COORDS;
+    setLoading(false);
+    mapEl.innerHTML = `<div style="padding:12px">المتصفح لا يدعم تحديد الموقع، سيتم استخدام موقع افتراضي: الدمام.</div>`;
+  }
+});
+
+/* زر البحث */
+searchBtn.addEventListener('click', () => {
+  if(!currentCoords) {
+    // نستخدم الموقع الافتراضي لو ما حصلنا على صراحة المستخدم بعد
+    currentCoords = DEFAULT_COORDS;
+    mapEl.innerHTML = `<div style="padding:12px">لم تُحدد موقعًا، سيتم استخدام الدمام افتراضياً.</div>`;
+  }
+  searchNearby();
+});
+
+/* فور تحميل الصفحة نعرض رسالة مبدئية */
+mapEl.innerHTML = `<div style="padding:12px">اضغط "استخدم موقعي الآن" للحصول على أفضل نتائج أو اضغط "ابحث" لاستخدام الموقع الافتراضي (الدمام).</div>`;
+</script>
+</body>
+</html>
